@@ -12,7 +12,7 @@ to run this est program, connect:
     2+ to w2
 """
 
-import Analysis_Instrument as ai
+import andi as ai
 import matplotlib.pyplot as plt
 import time
 

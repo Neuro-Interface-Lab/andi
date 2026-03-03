@@ -5,7 +5,6 @@
 # ETIS - University Cergy-Pontoise - CNRS
 
 import andi as ai
-import time
 
 #### TEST OF BASIC IN POSSIBILITIES
 

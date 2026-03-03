@@ -11,7 +11,7 @@ it seems that 250kHz/275kHz is the best rate the system can perform without
 issue (at least on my computer, YB) even if real troubles come around 700kHz.
 """
 
-import Analysis_Instrument as ai
+import andi as ai
 import matplotlib.pyplot as plt
 
 # open the first available device

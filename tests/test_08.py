@@ -16,7 +16,7 @@ scroll to update the sampling frequency
 center-click to give up previously acquired data
 close window to exit
 """
-import Analysis_Instrument as ai
+import andi as ai
 import matplotlib.pyplot as plt
 
 active = [True]

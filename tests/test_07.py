@@ -14,7 +14,7 @@ to run this est program, connect:
 scroll to modify number of acq averaged
 close window to exit
 """
-import Analysis_Instrument as ai
+import andi as ai
 import matplotlib.pyplot as plt
 
 active = [True]

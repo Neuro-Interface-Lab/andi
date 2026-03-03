@@ -10,7 +10,7 @@ to run this test program, connect:
 	1-, 2- to ground
 	
 """
-import Analysis_Instrument as ai
+import andi as ai
 import matplotlib.pyplot as plt
 
 # open the first available device
