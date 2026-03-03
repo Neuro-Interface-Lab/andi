@@ -4,7 +4,7 @@
 # Written by F. Kölbl
 # ETIS - University Cergy-Pontoise - CNRS
 
-import Analysis_Instrument as ai
+import andi as ai
 
 NB_dev = ai.nb_connected_devices()
 print(NB_dev)

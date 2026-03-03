@@ -4,7 +4,7 @@
 # Written by F. Kölbl
 # ETIS - University Cergy-Pontoise - CNRS
 
-import Analysis_Instrument as ai
+import andi as ai
 import time
 
 #### TEST OF BASIC OUT POSSIBILITIES
