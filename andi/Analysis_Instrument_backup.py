@@ -1,25 +1,20 @@
 """
-Analog Discovery 2 control helpers (Digilent WaveForms SDK).
+    Python library to use Analog Discovery 2
+    Authors: Florian Kolbl / Yannick Bornat
+    (c) ETIS - University Cergy-Pontoise
+        IMS - University of Bordeaux
+        CNRS
 
-This module provides a thin, ctypes-based wrapper around the Digilent WaveForms
-SDK (``libdwf``) to control an Analog Discovery 2 (and compatible) instrument.
+    Requires:
+        Python 3.6
+        dwfconstants.py from digilent (revision 2019-10-15)
+        dwf framework installed (provided with digilent 'waveforms' software)
+            tested with version 3.12.1
 
-The primary entry point is :class:`Andi`, which exposes high-level convenience
-methods for:
-
-- Analog output (AWG) configuration and waveform generation
-- Analog input (oscilloscope) configuration, triggering, and acquisition
-- Analog I/O (power supplies) control
-- Digital I/O read/write helpers
-- Impedance / network analyser configuration
-
-Notes
------
-- The WaveForms runtime and ``libdwf`` must be installed and discoverable on
-  the host system.
-- This file intentionally avoids changing indentation semantics (tabs are used
-  in several blocks) due to historical stability concerns on some platforms.
-
+    dev notes:
+        - FK 04/02/2021: avoid spaces for indentation, only use tabs
+                            all changed, cause a segmentation fault on top layer classes
+        - LR 14/04/2021: Add Vrange1 and Vrange2 to bode measurement method
 """
 
 
@@ -183,19 +178,6 @@ if szerr[0] != b'\0':
 
 
 def eng_format(v):
-    """
-    Format a numeric value using an engineering prefix.
-    
-    Parameters
-    ----------
-    v : object
-    	v.
-    
-    Returns
-    -------
-    s : str
-    	Formatted string.
-    """
     if v<0.0000001:
         return "    0"
     if v<0.001:
@@ -221,40 +203,22 @@ def eng_format(v):
     return "{:4.1f}M".format(v/1000000)
 
 def issue_warning(s):
-    """
-    Emit a user-facing warning message.
-    
-    Parameters
-    ----------
-    s : object
-    	s.
-    """
     #warn("\n--------\nWARNING: {}\n--------".format(s))
     print("WARNING: {}".format(s))
 
 # Print iterations progress, taken from slackoverflow
 def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
     """
-    Render a textual progress bar in the terminal.
-    
-    Parameters
-    ----------
-    iteration : int
-    	iteration.
-    total : int
-    	total.
-    prefix : str
-    	prefix.
-    suffix : str
-    	suffix.
-    decimals : int
-    	decimals.
-    length : int
-    	length.
-    fill : int
-    	fill.
-    printEnd : int
-    	printEnd.
+    Call in a loop to create terminal progress bar
+    @params:
+        iteration   - Required  : current iteration (Int)
+        total       - Required  : total iterations (Int)
+        prefix      - Optional  : prefix string (Str)
+        suffix      - Optional  : suffix string (Str)
+        decimals    - Optional  : positive number of decimals in percent complete (Int)
+        length      - Optional  : character length of bar (Int)
+        fill        - Optional  : bar fill character (Str)
+        printEnd    - Optional  : end character (e.g. "\r", "\r\n") (Str)
     """
     percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
     filledLength = int(length * iteration // total)
@@ -271,14 +235,6 @@ def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, 
 # ██      ██  ██ ██ ██  ██ ██ ██    ██ ██  ██  ██ ██      ██   ██ ██   ██    ██    ██ ██    ██ ██  ██ ██
 # ███████ ██   ████ ██   ████  ██████  ██      ██ ███████ ██   ██ ██   ██    ██    ██  ██████  ██   ████
 def nb_connected_devices():
-    """
-    Return the number of connected Digilent devices.
-    
-    Returns
-    -------
-    count : int
-    	Number of connected devices.
-    """
     # ctype variables declaration
     cDevice = ct.c_int()
     # Device enumration
@@ -286,19 +242,6 @@ def nb_connected_devices():
     return cDevice.value
 
 def device_name(device_number):
-    """
-    Query information for a given device index.
-    
-    Parameters
-    ----------
-    device_number : int
-    	device number.
-    
-    Returns
-    -------
-    name : bytes
-    	Device name as raw bytes.
-    """
     # ctype variables declaration
     devicename = ct.create_string_buffer(64)
     # retrieve name
@@ -306,19 +249,6 @@ def device_name(device_number):
     return devicename.value
 
 def device_SerialNumber(device_number):
-    """
-    Query information for a given device index.
-    
-    Parameters
-    ----------
-    device_number : int
-    	device number.
-    
-    Returns
-    -------
-    serial : bytes
-    	Device serial number as raw bytes.
-    """
     # ctype variables declaration
     serialnum = ct.create_string_buffer(16)
     # retrieve serial number
@@ -326,19 +256,6 @@ def device_SerialNumber(device_number):
     return serialnum.value
 
 def is_opened(device_number):
-    """
-    Perform the 'is_opened' operation.
-    
-    Parameters
-    ----------
-    device_number : int
-    	device number.
-    
-    Returns
-    -------
-    is_open : bool
-    	True if the device is already opened/in use.
-    """
     # ctype variables declaration
     IsInUse = ct.c_bool()
     # check if the device is already used
@@ -346,14 +263,6 @@ def is_opened(device_number):
     return IsInUse
 
 def find_first_free_device():
-    """
-    Perform the 'find_first_free_device' operation.
-    
-    Returns
-    -------
-    device_number : int or None
-    	Index of the first free device, or None if none are available.
-    """
     NB_dev = nb_connected_devices()
     if NB_dev == 0:
         return None
@@ -369,6 +278,17 @@ def find_first_free_device():
         else:
             return first_one
 
+def open_device(device_number):
+    #2020/03/23: complain to YB if you do not agree...
+    issue_warning("function open_device() is deprecated, use Andi() instance instead")
+    hdwf = ct.c_int()
+    dwf.FDwfDeviceOpen(ct.c_int(device_number), ct.byref(hdwf))
+    return hdwf
+
+def close_device(hdwf):
+    #2020/03/20: complain to YB if you do not agree...
+    issue_warning("function close_device() is deprecated, use Andi.close() instead")
+    dwf.FDwfDeviceClose(hdwf)
 
 #  █████  ███    ██ ██████  ██      ██████ ██       █████  ███████ ███████
 # ██   ██ ████   ██ ██   ██ ██     ██      ██      ██   ██ ██      ██
@@ -380,63 +300,17 @@ def find_first_free_device():
 ## Class for simple use of a device ##
 ######################################
 class Andi(object):
-    """
-    High-level controller for a Digilent Analog Discovery 2 device.
-    
-    The class wraps a WaveForms device handle (``hdwf``) and exposes convenience
-    methods for configuring and operating the different instrument subsystems.
-    
-    Parameters
-    ----------
-    *arg :
-        Optional device selector.
-    
-        - No argument: open the first available (free) device.
-        - ``int``: open the *n*th enumerated device.
-        - ``str``: open the device that matches the provided serial number
-          (matching is performed on the last 6 characters).
-    
-    Raises
-    ------
-    Exception
-        If no device is connected, no free device is available, or the selected
-        device is already opened by another process.
-    
-    Notes
-    -----
-    The instance can be used as a context manager to ensure subsystems are disabled
-    and the device handle is closed properly.
-    
-    Examples
-    --------
-    >>> from Analysis_Instrument import Andi
-    >>> with Andi() as dev:
-    ...     dev.sine(channel=0, freq=1e3, amp=1.0)
-    ...     dev.set_acq(freq=1e6, samples=8192)
-    ...     ch1, ch2 = dev.acq()
-    
+    """docstring for Andi
+    This class handles the Analog Discovery 2 device
     """
     def __init__(self, *arg):
         """
-        Open and initialize an Analog Discovery 2 device.
-        
-        Parameters
-        ----------
-        *arg :
-            Optional device selector (see :class:`Andi`).
-        
-        Notes
-        -----
-        On construction the device is opened, default trigger reference settings are
-        initialized, input channels are placed in average filter mode, and the default
-        input range is set to 5 V.
-        
-        See Also
-        --------
-        Andi.close : Close the device handle.
-        Andi.__enter__ : Context manager entry.
-        Andi.__exit__ : Context manager exit/cleanup.
-        
+        Opens an Analog Discovery 2 device.
+        if no argument is given, opens the first available device
+        if an integer value 'n' is given, opens the nth device found
+        if a string is given, opens the device which has the corresponding
+            serial number. Prefer this method if several devices are connected
+            to the same computer
         """
         super(Andi, self).__init__()
         self.arg = arg
@@ -488,64 +362,20 @@ class Andi(object):
     ## basic methods for device management ##
     #########################################
     def close(self):
-        """
-        Close the connection to the device.
-        """
         dwf.FDwfDeviceClose(self.hdwf)
 
     def __str__(self):
-        """
-        Return a string representation of the instance.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         s = "< Andi {}:{}>".format(self.andi_ID.value, self.serialnumber.decode()[3:])
         return s
 
     def __repr__(self):
-        """
-        Return a string representation of the instance.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         s = f"Andi({self.andi_ID})"
         return s
 
     def __enter__(self):
-        """
-        Context manager support.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         return self
 
     def __exit__(self, type, value, traceback):
-        """
-        Context manager support.
-        
-        Parameters
-        ----------
-        type : str
-        	type.
-        value : object
-        	value.
-        traceback : object
-        	traceback.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         dwf.FDwfAnalogOutConfigure(self.hdwf, ct.c_int(-1), ct.c_bool(False))       # disables all generator channels
         dwf.FDwfAnalogInChannelEnableSet(self.hdwf, ct.c_int(-1), ct.c_bool(False)) # disables all recording channels
         dwf.FDwfAnalogIOEnableSet(self.hdwf, ct.c_int(False))                       # disables analog output
@@ -553,14 +383,6 @@ class Andi(object):
         return False
 
     def disp_stats(self, header=""):
-        """
-        Print a human-readable summary of device configuration and limits.
-        
-        Parameters
-        ----------
-        header : str
-        	header.
-        """
         print("{}Device ID       : {}".format(header, self.andi_ID.value))
         print("{}Name            : {}".format(header, self.name.decode()))
         print("{}serial          : {}".format(header, self.serialnumber.decode()))
@@ -604,27 +426,15 @@ class Andi(object):
         print("{}    Hysteresis  : {:>9} | {:>9} | {:>9} | {:>9}".format(header, eng_format(self.get_trigger_hysteresis_value()), eng_format(t[0]), eng_format(t[1]), eng_format(t[2])))
 
     def disable_auto_config(self):
-        """
-        Perform the 'disable_auto_config' operation.
-        """
         dwf.FDwfDeviceAutoConfigureSet(self.hdwf, ct.c_int(0))
 
     def enable_auto_config(self):
-        """
-        Perform the 'enable_auto_config' operation.
-        """
         dwf.FDwfDeviceAutoConfigureSet(self.hdwf, ct.c_int(1))
 
     def enable_dynamic_auto_config(self):
-        """
-        Perform the 'enable_dynamic_auto_config' operation.
-        """
         dwf.FDwfDeviceAutoConfigureSet(self.hdwf, ct.c_int(3))
 
     def print_last_error_message(self):
-        """
-        Perform the 'print_last_error_message' operation.
-        """
         szerr = ct.create_string_buffer(512)
         dwf.FDwfGetLastErrorMsg(szerr)
         print(str(szerr.value))
@@ -638,222 +448,70 @@ class Andi(object):
     ## methods for generator control ##
     ###################################
     def out_channel_count(self):
-        """
-        Control or query the analog output (AWG) subsystem.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         Count_channels = ct.c_int()
         dwf.FDwfAnalogOutCount(self.hdwf,ct.byref(Count_channels))
         return Count_channels.value
 
     def reset_out(self, channel):
-        """
-        Perform the 'reset_out' operation.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        """
         dwf.FDwfAnalogOutReset(self.hdwf,ct.c_int(channel))
 
     def enable_out_channel(self,channel):
-        """
-        Perform the 'enable_out_channel' operation.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        """
         dwf.FDwfAnalogOutNodeEnableSet(self.hdwf, ct.c_int(channel), DWFC.AnalogOutNodeCarrier, ct.c_bool(True))
 
     def disable_out_channel(self,channel):
-        """
-        Perform the 'disable_out_channel' operation.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        """
         dwf.FDwfAnalogOutNodeEnableSet(self.hdwf, ct.c_int(channel), DWFC.AnalogOutNodeCarrier, ct.c_bool(False))
 
     def is_out_channel_enable(self,channel):
-        """
-        Perform the 'is_out_channel_enable' operation.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         IsEnable = ct.c_bool()
         dwf.FDwfAnalogOutNodeEnableGet(self.hdwf, ct.c_int(channel), DWFC.AnalogOutNodeCarrier, ct.byref(IsEnable))
         return IsEnable.value
 
     def out_frequency_info(self,channel):
-        """
-        Return the supported range and/or limits for this setting.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         f_min = ct.c_double()
         f_max = ct.c_double()
         dwf.FDwfAnalogOutNodeFrequencyInfo(self.hdwf, ct.c_int(channel), DWFC.AnalogOutNodeCarrier, ct.byref(f_min), ct.byref(f_max))
         return [f_min.value, f_max.value]
 
     def out_amplitude_info(self,channel):
-        """
-        Return the supported range and/or limits for this setting.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         A_min = ct.c_double()
         A_max = ct.c_double()
         dwf.FDwfAnalogOutNodeAmplitudeInfo(self.hdwf, ct.c_int(channel), DWFC.AnalogOutNodeCarrier, ct.byref(A_min), ct.byref(A_max))
         return [A_min.value, A_max.value]
 
     def out_offset_info(self,channel):
-        """
-        Return the supported range and/or limits for this setting.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         O_min = ct.c_double()
         O_max = ct.c_double()
         dwf.FDwfAnalogOutNodeOffsetInfo(self.hdwf, ct.c_int(channel), DWFC.AnalogOutNodeCarrier, ct.byref(O_min), ct.byref(O_max))
         return [O_min.value, O_max.value]
 
     def out_symmetry_info(self,channel):
-        """
-        Return the supported range and/or limits for this setting.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         S_min = ct.c_double()
         S_max = ct.c_double()
         dwf.FDwfAnalogOutNodeSymmetryInfo(self.hdwf, ct.c_int(channel), DWFC.AnalogOutNodeCarrier, ct.byref(S_min), ct.byref(S_max))
         return [S_min.value, S_max.value]
 
     def out_phase_info(self,channel):
-        """
-        Return the supported range and/or limits for this setting.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         P_min = ct.c_double()
         P_max = ct.c_double()
         dwf.FDwfAnalogOutNodePhaseInfo(self.hdwf, ct.c_int(channel), DWFC.AnalogOutNodeCarrier, ct.byref(P_min), ct.byref(P_max))
         return [P_min.value, P_max.value]
 
     def out_data_info(self,channel):
-        """
-        Return the supported range and/or limits for this setting.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         D_min = ct.c_int()
         D_max = ct.c_int()
         dwf.FDwfAnalogOutNodeDataInfo(self.hdwf, ct.c_int(channel), DWFC.AnalogOutNodeCarrier, ct.byref(D_min), ct.byref(D_max))
         return [D_min.value, D_max.value]
 
     def out_run_info(self,channel):
-        """
-        Return the supported range and/or limits for this setting.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         T_min = ct.c_double()
         T_max = ct.c_double()
         dwf.FDwfAnalogOutNodeDataInfo(self.hdwf, ct.c_int(channel), ct.byref(T_min), ct.byref(T_max))
         return [T_min.value, T_max.value]
 
     def out_channel_on(self,channel):
-        """
-        Control or query the analog output (AWG) subsystem.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        """
         dwf.FDwfAnalogOutConfigure(self.hdwf, ct.c_int(channel), ct.c_bool(True))
 
     def out_channel_off(self,channel):
-        """
-        Control or query the analog output (AWG) subsystem.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        """
         dwf.FDwfAnalogOutConfigure(self.hdwf, ct.c_int(channel), ct.c_bool(False))
 
     ###################################
@@ -861,15 +519,8 @@ class Andi(object):
     ###################################
     ## Basic methods
     def out_set_function(self,channel,function):
-        """
-        Set an analog output parameter.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        function : str
-        	function.
+        """function can be either:
+        (DC, Sine, Square, Triangle, Rampup, Rampdown, Noise, Custom, Play)
         """
         func = OutputFunctionModesByName.get(function, "Invalid function")
         if func == 'Invalid function':
@@ -877,189 +528,51 @@ class Andi(object):
         dwf.FDwfAnalogOutNodeFunctionSet(self.hdwf, ct.c_int(channel), DWFC.AnalogOutNodeCarrier, func)
 
     def out_get_function(self,channel):
-        """
-        Get the current analog output parameter.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         func = ct.c_ubyte()
         dwf.FDwfAnalogOutNodeFunctionGet(self.hdwf, ct.c_int(channel), DWFC.AnalogOutNodeCarrier, ct.byref(func))
         return OutputFunctionModesById[func.value]
 
     def out_set_freq(self,channel,freq):
-        """
-        Set an analog output parameter.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        freq : float
-        	freq.
-        """
         dwf.FDwfAnalogOutNodeFrequencySet(self.hdwf, ct.c_int(channel), DWFC.AnalogOutNodeCarrier, ct.c_double(freq))
 
     def out_get_freq(self,channel):
-        """
-        Get the current analog output parameter.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         freq = ct.c_double()
         dwf.FDwfAnalogOutNodeFrequencyGet(self.hdwf, ct.c_int(channel), DWFC.AnalogOutNodeCarrier, ct.byref(freq))
         return freq.value
 
     def out_set_Amp(self,channel,Amp):
-        """
-        Set an analog output parameter.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        Amp : float
-        	Amp.
-        """
         dwf.FDwfAnalogOutNodeAmplitudeSet(self.hdwf, ct.c_int(channel), DWFC.AnalogOutNodeCarrier, ct.c_double(Amp))
 
     def out_get_Amp(self,channel):
-        """
-        Get the current analog output parameter.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         Amp = ct.c_double()
         dwf.FDwfAnalogOutNodeAmplitudeGet(self.hdwf, ct.c_int(channel), DWFC.AnalogOutNodeCarrier, ct.byref(Amp))
         return Amp.value
 
     def out_set_Offset(self,channel,Offset):
-        """
-        Set an analog output parameter.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        Offset : float
-        	Offset.
-        """
         dwf.FDwfAnalogOutNodeOffsetSet(self.hdwf, ct.c_int(channel), DWFC.AnalogOutNodeCarrier, ct.c_double(Offset))
 
     def out_get_Offset(self,channel):
-        """
-        Get the current analog output parameter.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         Offset = ct.c_double()
         dwf.FDwfAnalogOutNodeOffsetGet(self.hdwf, ct.c_int(channel), DWFC.AnalogOutNodeCarrier, ct.byref(Offset))
         return Offset.value
 
     def out_set_Symmetry(self,channel,Symmetry):
-        """
-        Set an analog output parameter.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        Symmetry : float
-        	Symmetry.
-        """
         dwf.FDwfAnalogOutNodeSymmetrySet(self.hdwf, ct.c_int(channel), DWFC.AnalogOutNodeCarrier, ct.c_double(Symmetry))
 
     def out_get_Symmetry(self,channel):
-        """
-        Get the current analog output parameter.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         Symmetry = ct.c_double()
         dwf.FDwfAnalogOutNodeSymmetryGet(self.hdwf, ct.c_int(channel), DWFC.AnalogOutNodeCarrier, ct.byref(Symmetry))
         return Symmetry.value
 
     def out_set_Phase(self,channel,Phase):
-        """
-        Set an analog output parameter.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        Phase : float
-        	Phase.
-        """
         dwf.FDwfAnalogOutNodePhaseSet(self.hdwf, ct.c_int(channel), DWFC.AnalogOutNodeCarrier, ct.c_double(Phase))
 
     def out_get_Phase(self,channel):
-        """
-        Get the current analog output parameter.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         Phase = ct.c_double()
         dwf.FDwfAnalogOutNodePhaseGet(self.hdwf, ct.c_int(channel), DWFC.AnalogOutNodeCarrier, ct.byref(Phase))
         return Phase.value
 
     def out_set_Data(self,channel,data):
-        """
-        Set an analog output parameter.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        data : numpy.ndarray
-        	data.
-        """
         # code 
         dataf = data.astype(np.float64)
         # AnalogOut expects double normalized to +/-1 value
@@ -1085,26 +598,6 @@ class Andi(object):
 
     ## Simple generators
     def sine(self,channel,freq,amp,offset = 0,symmetry = 50, phase = 0, activate = True):
-        """
-        Configure the signal generator to output a sine waveform.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        freq : float
-        	freq.
-        amp : float
-        	amp.
-        offset : float
-        	offset.
-        symmetry : float
-        	symmetry.
-        phase : float
-        	phase.
-        activate : bool
-        	activate.
-        """
         self.reset_out(channel)
         self.enable_out_channel(channel)
         self.out_channel_off(channel)
@@ -1118,26 +611,6 @@ class Andi(object):
             self.out_channel_on(channel)
 
     def square(self,channel,freq,amp,offset = 0,symmetry = 50, phase = 0, activate = True):
-        """
-        Configure the signal generator to output a square waveform.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        freq : float
-        	freq.
-        amp : float
-        	amp.
-        offset : float
-        	offset.
-        symmetry : float
-        	symmetry.
-        phase : float
-        	phase.
-        activate : bool
-        	activate.
-        """
         self.reset_out(channel)
         self.enable_out_channel(channel)
         self.out_channel_off(channel)
@@ -1151,26 +624,6 @@ class Andi(object):
             self.out_channel_on(channel)
 
     def triangle(self,channel,freq,amp,offset = 0,symmetry = 50, phase = 0, activate = True):
-        """
-        Configure the signal generator to output a triangle waveform.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        freq : float
-        	freq.
-        amp : float
-        	amp.
-        offset : float
-        	offset.
-        symmetry : float
-        	symmetry.
-        phase : float
-        	phase.
-        activate : bool
-        	activate.
-        """
         self.reset_out(channel)
         self.enable_out_channel(channel)
         self.out_channel_off(channel)
@@ -1184,78 +637,16 @@ class Andi(object):
             self.out_channel_on(channel)
 
     def rampup(self,channel,freq,amp,offset = 0,symmetry = 50, phase = 0):
-        """
-        Configure the signal generator to output a rampup waveform.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        freq : float
-        	freq.
-        amp : float
-        	amp.
-        offset : float
-        	offset.
-        symmetry : float
-        	symmetry.
-        phase : float
-        	phase.
-        """
         print('to be coded')
 
     def rampdown(self,channel,freq,amp,offset = 0,symmetry = 50, phase = 0):
-        """
-        Configure the signal generator to output a rampdown waveform.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        freq : float
-        	freq.
-        amp : float
-        	amp.
-        offset : float
-        	offset.
-        symmetry : float
-        	symmetry.
-        phase : float
-        	phase.
-        """
         print('to be coded')
 
     def noise(self,channel,freq,amp,offset = 0):
-        """
-        Configure the signal generator to output a noise waveform.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        freq : float
-        	freq.
-        amp : float
-        	amp.
-        offset : float
-        	offset.
-        """
         print('to be coded')
     ## Advanced generators
 
     def custom(self,channel,fs,data):
-        """
-        Configure the signal generator to output a custom waveform.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        fs : float
-        	fs.
-        data : numpy.ndarray
-        	data.
-        """
 
         N_samples = len(data)
 
@@ -1289,135 +680,54 @@ class Andi(object):
     ## methods for scope control ##
     ###############################
     def in_channel_count(self):
-        """
-        Configure or query an analog input channel setting.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         Count_channels = ct.c_int()
         dwf.FDwfAnalogInChannelCount(self.hdwf,ct.byref(Count_channels))
         return Count_channels.value
 
     def reset_in(self):
-        """
-        Perform the 'reset_in' operation.
-        """
         dwf.FDwfAnalogInReset(self.hdwf)
 
     def in_channels_start(self):
-        """
-        Control or query the analog input (oscilloscope) subsystem.
-        """
         dwf.FDwfAnalogInConfigure(self.hdwf, ct.c_bool(False), ct.c_bool(True))
 
     def in_channels_stop(self):
-        """
-        Control or query the analog input (oscilloscope) subsystem.
-        """
         dwf.FDwfAnalogInConfigure(self.hdwf, ct.c_bool(False), ct.c_bool(False))
 
     def in_frequency_info(self):
-        """
-        Return the supported range and/or limits for this setting.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         F_min = ct.c_double()
         F_max = ct.c_double()
         dwf.FDwfAnalogInFrequencyInfo(self.hdwf, ct.byref(F_min), ct.byref(F_max))
         return [F_min.value, F_max.value]
 
     def in_sampling_freq_set(self,freq):
-        """
-        Configure or query the ADC sampling frequency.
-        
-        Parameters
-        ----------
-        freq : float
-        	freq.
-        """
         dwf.FDwfAnalogInFrequencySet(self.hdwf,ct.c_double(freq))
 
     def in_sampling_freq_get(self):
-        """
-        Configure or query the ADC sampling frequency.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         freq = ct.c_double()
         dwf.FDwfAnalogInFrequencyGet(self.hdwf,ct.byref(freq))
         return freq.value
     
 
     def in_bits_info(self):
-        """
-        Return the supported range and/or limits for this setting.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         Nbits = ct.c_int()
         dwf.FDwfAnalogInBitsInfo(self.hdwf, ct.byref(Nbits))
         return Nbits.value
 
     def in_buffer_size_info(self):
-        """
-        Return the supported range and/or limits for this setting.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         S_min = ct.c_int()
         S_max = ct.c_int()
         dwf.FDwfAnalogInBufferSizeInfo(self.hdwf, ct.byref(S_min), ct.byref(S_max))
         return [S_min.value, S_max.value]
 
     def in_buffer_size_set(self,size):
-        """
-        Configure or query the acquisition buffer size.
-        
-        Parameters
-        ----------
-        size : object
-        	size.
-        """
         dwf.FDwfAnalogInBufferSizeSet(self.hdwf,ct.c_int(size))
 
     def in_buffer_size_get(self):
-        """
-        Configure or query the acquisition buffer size.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         size = ct.c_int()
         dwf.FDwfAnalogInBufferSizeGet(self.hdwf,ct.byref(size))
         return size.value
 
     def in_set_aquisition_mode(self,mode):
-        """
-        Control or query the analog input (oscilloscope) subsystem.
-        
-        Parameters
-        ----------
-        mode : int
-        	mode.
-        """
         aqmode = AcquisitionModeByName.get(mode, "Invalid mode")
         if aqmode == 'Invalid mode':
             print('Error: wrong aquisition mode, scope fail...')
@@ -1430,59 +740,17 @@ class Andi(object):
     #################################
     ## channel configuration methods
     def in_enable_channel(self,channel):
-        """
-        Control or query the analog input (oscilloscope) subsystem.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        """
         dwf.FDwfAnalogInChannelEnableSet(self.hdwf, ct.c_int(channel), ct.c_bool(True))
 
     def in_disable_channel(self,channel):
-        """
-        Control or query the analog input (oscilloscope) subsystem.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        """
         dwf.FDwfAnalogInChannelEnableSet(self.hdwf, ct.c_int(channel), ct.c_bool(False))
 
     def is_in_channel_enable(self,channel):
-        """
-        Perform the 'is_in_channel_enable' operation.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         IsEnable = ct.c_bool()
         dwf.FDwfAnalogInChannelEnableGet(self.hdwf, ct.c_int(channel), ct.byref(IsEnable))
         return IsEnable.value
 
     def in_channel_range_info(self,channel):
-        """
-        Return the supported range and/or limits for this setting.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         V_min = ct.c_double()
         V_max = ct.c_double()
         nSteps = ct.c_double()
@@ -1490,50 +758,14 @@ class Andi(object):
         return [V_min.value,V_max.value,nSteps.value]
 
     def in_channel_range_set(self,channel,Vrange):
-        """
-        Configure or query an analog input channel setting.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        Vrange : float
-        	Vrange.
-        """
         dwf.FDwfAnalogInChannelRangeSet(self.hdwf,ct.c_int(channel),ct.c_double(Vrange))
 
     def in_channel_range_get(self,channel):
-        """
-        Configure or query an analog input channel setting.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         Vrange = ct.c_double()
         dwf.FDwfAnalogInChannelRangeGet(self.hdwf,ct.c_int(channel),ct.byref(Vrange))
         return Vrange.value
 
     def in_channel_offset_info(self,channel):
-        """
-        Return the supported range and/or limits for this setting.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         O_min = ct.c_double()
         O_max = ct.c_double()
         nSteps = ct.c_double()
@@ -1541,132 +773,42 @@ class Andi(object):
         return [O_min.value,O_max.value,nSteps.value]
 
     def in_channel_offset_set(self,channel,Voffset):
-        """
-        Configure or query an analog input channel setting.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        Voffset : float
-        	Voffset.
-        """
         dwf.FDwfAnalogInChannelOffsetSet(self.hdwf,ct.c_int(channel),ct.c_double(Voffset))
 
     def in_channel_offset_get(self,channel):
-        """
-        Configure or query an analog input channel setting.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         Voffset = ct.c_double()
         dwf.FDwfAnalogInChannelOffsetGet(self.hdwf,ct.c_int(channel),ct.byref(Voffset))
         return Voffset.value
 
     def in_channel_attenuation_set(self,channel,xAtt):
-        """
-        Configure or query an analog input channel setting.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        xAtt : object
-        	xAtt.
-        """
         dwf.FDwfAnalogInChannelAttenuationSet(self.hdwf,ct.c_int(channel),ct.c_double(xAtt))
 
     def in_channel_attenuation_get(self,channel):
-        """
-        Configure or query an analog input channel setting.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         xAtt = ct.c_double()
         dwf.FDwfAnalogInChannelAttenuationGet(self.hdwf,ct.c_int(channel),ct.byref(xAtt))
         return xAtt.value
 
     def in_set_channel(self,channel,Vrange,Voffset = 0.0, attenuation = 1.0):
-        """
-        Control or query the analog input (oscilloscope) subsystem.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        Vrange : float
-        	Vrange.
-        Voffset : float
-        	Voffset.
-        attenuation : object
-        	attenuation.
-        """
         self.in_channel_range_set(channel,Vrange)
         self.in_channel_offset_set(channel,Voffset)
         self.in_channel_attenuation_set(channel,attenuation)
 
     def in_decimate_filter_mode(self,channel):
-        """
-        Control or query the analog input (oscilloscope) subsystem.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        """
         dwf.FDwfAnalogInChannelFilterSet(self.hdwf, ct.c_int(channel), DWFC.filterDecimate)
 
     def in_average_filter_mode(self,channel):
-        """
-        Control or query the analog input (oscilloscope) subsystem.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        """
         dwf.FDwfAnalogInChannelFilterSet(self.hdwf, ct.c_int(channel), DWFC.filterAverage)
 
 
     ## Trigger methods
     def get_trigger_timeout(self):
-        """
-        Get or set trigger configuration values.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
+        """returns the current trigger timeout, 0 means no timeout (trigger in mode 'normal')"""
         to = ct.c_double()
         dwf.FDwfAnalogInTriggerAutoTimeoutGet(self.hdwf, ct.byref(to))
         return to.value
 
     def get_trigger_source(self):
-        """
-        Get or set trigger configuration values.
-        
-        Returns
-        -------
-        source, channel : tuple
-        	Trigger source name and channel index.
-        """
+        """returns the current trigger source and channel as a tuple"""
         src = ct.c_ubyte()
         chan = ct.c_int()
         dwf.FDwfAnalogInTriggerSourceGet(self.hdwf, ct.byref(src))
@@ -1674,14 +816,6 @@ class Andi(object):
         return TriggerSourceById[src.value], chan.value
 
     def get_trigger_threshold_info(self):
-        """
-        Return the supported range and/or limits for this setting.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         vmin = ct.c_double()
         vmax = ct.c_double()
         steps = ct.c_double()
@@ -1689,27 +823,11 @@ class Andi(object):
         return [vmin.value, vmax.value, steps.value]
 
     def get_trigger_threshold_value(self):
-        """
-        Get or set trigger configuration values.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         val = ct.c_double()
         dwf.FDwfAnalogInTriggerLevelGet(self.hdwf, ct.byref(val))
         return val.value
 
     def get_trigger_hysteresis_info(self):
-        """
-        Return the supported range and/or limits for this setting.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         vmin = ct.c_double()
         vmax = ct.c_double()
         steps = ct.c_double()
@@ -1717,40 +835,24 @@ class Andi(object):
         return [vmin.value, vmax.value, steps.value]
 
     def get_trigger_hysteresis_value(self):
-        """
-        Get or set trigger configuration values.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         val = ct.c_double()
         dwf.FDwfAnalogInTriggerHysteresisGet(self.hdwf, ct.byref(val))
         return val.value
 
     def set_Chan_trigger(self, source, threshold, hysteresis=0.01, type="Rising", position=0, ref="center"):
         """
-        Configure the trigger settings for acquisitions.
+        Set the channel 'source' as the input trigger with given threshold (channels 1 and 2 are respectively
+           referenced as sources 0 and 1)
+        optionnally, hysteresis can be set to cope with higly noisy inputs (signal must go above
+           threshold+hysteresis then below threshold-hysteresis for the trigger to shoot again).
+        type is one of "Rising", "Falling" or "Both".
+        position makes it possible to shift the trigger in time. By default trigger time is in the center
+           of the acquisition. It is possible to change this reference by setting ref as one of "center",
+           "left", "right", "left border", "right border". Using "left", the trigger time is positionned
+           at 10% of the recording, unsing "left border", acquisition starts precisely at the trigger time.
         
-        Parameters
-        ----------
-        source : int
-        	source.
-        threshold : float
-        	threshold.
-        hysteresis : float
-        	hysteresis.
-        type : str
-        	type.
-        position : float
-        	position.
-        ref : str
-        	ref.
-        
-        Notes
-        -----
-        Analog triggering on this device can be less accurate than expected, especially when averaging.
+        WARNING: Tests have shown that analog trigger was not specifically accurate, use with caution
+           when using averagign techniques
         """
         if threshold<0:
             issue_warning("Threshold is set to a negative value, this is not supported by Analog Discovery 2")
@@ -1770,20 +872,7 @@ class Andi(object):
 
     def set_Auto_chan_trigger(self, source, timeout=0.001, type="Rising", position=0, ref="center"):
         """
-        Configure the trigger settings for acquisitions.
-        
-        Parameters
-        ----------
-        source : int
-        	source.
-        timeout : float
-        	timeout.
-        type : str
-        	type.
-        position : float
-        	position.
-        ref : str
-        	ref.
+        Set trigger to "auto"
         """
         self.trigg_ref      = TriggerReference[ref.lower()]
         self.trigg_position = position
@@ -1800,18 +889,13 @@ class Andi(object):
 
     def set_Ext_trigger(self, source, type="Rising", position=0, ref="center"):
         """
-        Configure the trigger settings for acquisitions.
-        
-        Parameters
-        ----------
-        source : int
-        	source.
-        type : str
-        	type.
-        position : float
-        	position.
-        ref : str
-        	ref.
+        Set the external trigger 'source' as the input trigger (T1 and T2 are digital inputs actually
+           referenced as 0 and 1)
+        type is one of "Rising", "Falling" or "Both".
+        position makes it possible to shift the trigger in time. By default trigger time is in the center
+           of the acquisition. It is possible to change this reference by setting ref as one of "center",
+           "left", "right", "left border", "right border". Using "left", the trigger time is positionned
+           at 10% of the recording, unsing "left border", acquisition starts precisely at the trigger time.
         """
         source_name = ["External1", "External2", "External3", "External4"]
         self.trigg_ref      = TriggerReference[ref.lower()]
@@ -1824,18 +908,14 @@ class Andi(object):
 
     def set_AWG_trigger(self, source, type="Rising", position=0, ref="center"):
         """
-        Configure the trigger settings for acquisitions.
-        
-        Parameters
-        ----------
-        source : int
-        	source.
-        type : str
-        	type.
-        position : float
-        	position.
-        ref : str
-        	ref.
+        DOESNT WORK!! --> seems to work just fine (LR)
+        Set the AWG as a trigger 
+           referenced as 0 and 1)
+        type is one of "Rising", "Falling" or "Both".
+        position makes it possible to shift the trigger in time. By default trigger time is in the center
+           of the acquisition. It is possible to change this reference by setting ref as one of "center",
+           "left", "right", "left border", "right border". Using "left", the trigger time is positionned
+           at 10% of the recording, unsing "left border", acquisition starts precisely at the trigger time.
         """
         source_name = ["AnalogOut1", "AnalogOut2", "AnalogOut3", "AnalogOut4"]
         self.trigg_ref      = TriggerReference[ref.lower()]
@@ -1849,42 +929,12 @@ class Andi(object):
 
     ## signal recording methods
     def in_configure_channel_record_Nsamples(self,channel,N,f_sample):
-        """
-        Acquire samples from the analog input subsystem in record mode.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        N : int
-        	N.
-        f_sample : float
-        	f sample.
-        """
         self.in_sampling_freq_set(f_sample)
         self.in_set_aquisition_mode('Record')
         dwf.FDwfAnalogInRecordLengthSet(self.hdwf, ct.c_double(N/f_sample))
 
     def in_channel_record_Nsamples(self,channel,N,f_sample,filename=''):
-        """
-        Acquire samples from the analog input subsystem in record mode.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        N : int
-        	N.
-        f_sample : float
-        	f sample.
-        filename : str
-        	filename.
-        
-        Returns
-        -------
-        t, data : tuple of numpy.ndarray
-        	Time vector and acquired voltage samples.
-        """
+        """Performs continuous acquisition on a single input channel"""
         # variables declaration
         sts = ct.c_byte()
         rgdSamples = (ct.c_double*N)()
@@ -1931,23 +981,14 @@ class Andi(object):
 
     def record(self, channel, freq, samples=8192, time=None):
         """
-        Perform the 'record' operation.
+        Performs continuous acquisition on a single input channel
+        channel : the channel to record
+        freq    : the sampling frequency
+        samples : the number of samples to acquire
+        time    : the duration of the recording
         
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        freq : float
-        	freq.
-        samples : int
-        	samples.
-        time : float
-        	time.
-        
-        Returns
-        -------
-        t, data : tuple of numpy.ndarray
-        	Time vector and acquired voltage samples.
+        if time is provided, samples is ignored.
+        channel must have been configured (with in_set_channel)
         """
 
         #setting frequency first
@@ -2024,23 +1065,15 @@ class Andi(object):
 
     def set_acq(self, time=None, freq=1000000, samples=8192, pw2=False):
         """
-        Perform the 'set_acq' operation.
+        defines parameters for acquisition
+        freq    : the sampling frequency
+        samples : the number of samples to acquire
+        time    : the length of the acquisition. The actual data retrieved might be longer.
+        pw2     : forces the number of samples to be a power of 2 (this improves some
+                    computation times like FFT).
         
-        Parameters
-        ----------
-        time : float
-        	time.
-        freq : float
-        	freq.
-        samples : int
-        	samples.
-        pw2 : bool
-        	pw2.
-        
-        Returns
-        -------
-        t : numpy.ndarray
-        	Time vector aligned to the configured trigger reference.
+        if time is provided, freq and samples are ignored, and the setup detemines the highest frequency and the
+        appropriate number of samples to provide the requested recording length at best
         """
         # variables declaration
         cBufMax = ct.c_int()
@@ -2103,23 +1136,16 @@ class Andi(object):
 
     def acq(self, avg=1, quantum=None):
         """
-        Perform the 'acq' operation.
+        Performs oscilloscope-like acquisition on the two input channels
+        avg     : number of acquisitions to average to improve precision
+        quantum : chooses the best avg value to achieve an this precision
+                    (avg=1 means 0.0003V precision if range=5V)
         
-        Parameters
-        ----------
-        avg : object
-        	avg.
-        quantum : object
-        	quantum.
+        if both avg and quantum are defined, values are multiplied, for example, defining
+        quantum=0.0001 means 3 acquisitions, but defining both quantum=0.0001 and avg=3 means
+        9 acquisition (3 acquisitions at 0.1mV precision)
         
-        Returns
-        -------
-        data0, data1 : tuple of numpy.ndarray
-        	Acquired samples for input channels 0 and 1.
-        
-        Notes
-        -----
-        Averaging requires a repetitive signal. If analog triggering is used, averaging may degrade timing accuracy.
+        WARNING: using avg and quantum parameters requires the signal to be repetitive 
         """
         if self.acq_freq == None:
             # someone prefers returning dummy data ?
@@ -2172,64 +1198,28 @@ class Andi(object):
     ## methods for analog IO ##
     ###########################
     def reset_analogIO(self):
-        """
-        Control the device analog I/O (power supplies, sensors).
-        """
         dwf.FDwfAnalogIOReset(self.hdwf)
 
     def configure_analogIO(self):
-        """
-        Control the device analog I/O (power supplies, sensors).
-        """
         dwf.FDwfAnalogIOConfigure(self.hdwf)
 
     def enable_analogIO(self):
-        """
-        Control the device analog I/O (power supplies, sensors).
-        """
         dwf.FDwfAnalogIOEnableSet(self.hdwf, ct.c_int(True))
 
     def disable_analogIO(self):
-        """
-        Control the device analog I/O (power supplies, sensors).
-        """
         dwf.FDwfAnalogIOEnableSet(self.hdwf, ct.c_int(False))
 
     def is_analogIO_enable(self):
-        """
-        Control the device analog I/O (power supplies, sensors).
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         IsEnabled = ct.c_bool()
         dwf.FDwfAnalogIOEnableStatus(self.hdwf, ct.byref(IsEnabled))
         return IsEnabled.value
 
     def set_asymetric_power_supply(self,V_supply=5.):
-        """
-        Control the device analog I/O (power supplies, sensors).
-        
-        Parameters
-        ----------
-        V_supply : object
-        	V supply.
-        """
         dwf.FDwfAnalogIOChannelNodeSet(self.hdwf, ct.c_int(0), ct.c_int(0), ct.c_double(True))
         dwf.FDwfAnalogIOChannelNodeSet(self.hdwf, ct.c_int(0), ct.c_int(1), ct.c_double(V_supply))
         self.enable_analogIO()
 
     def set_symetric_power_supply(self,V_supply=5.):
-        """
-        Control the device analog I/O (power supplies, sensors).
-        
-        Parameters
-        ----------
-        V_supply : object
-        	V supply.
-        """
         dwf.FDwfAnalogIOChannelNodeSet(self.hdwf, ct.c_int(0), ct.c_int(0), ct.c_double(True))
         dwf.FDwfAnalogIOChannelNodeSet(self.hdwf, ct.c_int(0), ct.c_int(1), ct.c_double(V_supply))
         dwf.FDwfAnalogIOChannelNodeSet(self.hdwf, ct.c_int(1), ct.c_int(0), ct.c_double(True))
@@ -2237,14 +1227,6 @@ class Andi(object):
         self.enable_analogIO()
 
     def check_USB_supply(self):
-        """
-        Control the device analog I/O (power supplies, sensors).
-        
-        Returns
-        -------
-        voltage, current : tuple of float
-        	Measured USB supply voltage and current.
-        """
         usbVoltage = ct.c_double()
         usbCurrent = ct.c_double()
         dwf.FDwfAnalogIOChannelNodeStatus(self.hdwf, ct.c_int(2), ct.c_int(0), ct.byref(usbVoltage))
@@ -2252,14 +1234,6 @@ class Andi(object):
         return usbVoltage.value, usbCurrent.value
 
     def check_Auxiliary_supply(self):
-        """
-        Control the device analog I/O (power supplies, sensors).
-        
-        Returns
-        -------
-        voltage, current : tuple of float
-        	Measured auxiliary supply voltage and current.
-        """
         auxVoltage = ct.c_double()
         auxCurrent = ct.c_double()
         dwf.FDwfAnalogIOChannelNodeStatus(self.hdwf, ct.c_int(3), ct.c_int(0), ct.byref(auxVoltage))
@@ -2270,48 +1244,18 @@ class Andi(object):
     ## methods for Digital IO ##
     ############################
     def reset_digitalIO(self):
-        """
-        Control or query the digital I/O subsystem.
-        """
         dwf.FDwfDigitalIOReset(self.hdwf)
 
     def configure_digitalIO(self):
-        """
-        Control or query the digital I/O subsystem.
-        """
         dwf.FDwfDigitalIOConfigure(self.hdwf)
 
     def digitalIO_set_as_output(self,mask):
-        """
-        Control or query the digital I/O subsystem.
-        
-        Parameters
-        ----------
-        mask : int
-        	mask.
-        """
         dwf.FDwfDigitalIOOutputEnableSet(self.hdwf, ct.c_int(mask))
 
     def digitalIO_output(self,value):
-        """
-        Control or query the digital I/O subsystem.
-        
-        Parameters
-        ----------
-        value : object
-        	value.
-        """
         dwf.FDwfDigitalIOOutputSet(self.hdwf, ct.c_int(value))  
 
     def digitalIO_read(self):
-        """
-        Control or query the digital I/O subsystem.
-        
-        Returns
-        -------
-        value : int
-        	Digital input state as a bitfield.
-        """
         dwRead = ct.c_uint32()
         # fetch digital IO information from the device 
         dwf.FDwfDigitalIOStatus(self.hdwf) 
@@ -2322,14 +1266,6 @@ class Andi(object):
         return(dwRead.value)
     
     def digitalIO_read_outputs(self):
-        """
-        Control or query the digital I/O subsystem.
-        
-        Returns
-        -------
-        value : int
-        	Digital output state as a bitfield.
-        """
         dwRead = ct.c_uint32()
         dwf.FDwfDigitalIOOutputGet(self.hdwf, ct.byref(dwRead))
         return(dwRead.value)
@@ -2339,214 +1275,72 @@ class Andi(object):
     ################################
     ## Basic methods
     def reset_analyser(self):
-        """
-        Control the impedance/network analyser features.
-        """
         dwf.FDwfAnalogImpedanceReset(self.hdwf)
 
     def set_analyser_mode(self, mode):
-        """
-        Control the impedance/network analyser features.
-        
-        Parameters
-        ----------
-        mode : int
-        	mode.
-        """
         dwf.FDwfAnalogImpedanceModeSet(self.hdwf, ct.c_int(mode))
 
     def get_analyser_mode(self):
-        """
-        Control the impedance/network analyser features.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         analyser_mode = ct.c_int()
         dwf.FDwfAnalogImpedanceModeGet(self.hdwf, ct.byref(analyser_mode))
         return analyser_mode.value
 
     def set_impedance_analyser_reference(self, resistor):
-        """
-        Control the impedance/network analyser features.
-        
-        Parameters
-        ----------
-        resistor : float
-        	resistor.
-        """
         dwf.FDwfAnalogImpedanceReferenceSet(self.hdwf, ct.c_double(resistor))
 
     def get_impedance_analyser_reference(self):
-        """
-        Control the impedance/network analyser features.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         reference_resistor = ct.c_double()
         dwf.FDwfAnalogImpedanceReferenceGet(self.hdwf, ct.byref(reference_resistor))
         return reference_resistor.value
 
     def set_analyser_frequency(self, freq):
-        """
-        Control the impedance/network analyser features.
-        
-        Parameters
-        ----------
-        freq : float
-        	freq.
-        """
         dwf.FDwfAnalogImpedanceFrequencySet(self.hdwf, ct.c_double(freq))
 
     def get_analyser_frequency(self):
-        """
-        Control the impedance/network analyser features.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         freq = ct.c_double()
         dwf.FDwfAnalogImpedanceFrequencyGet(self.hdwf, ct.byref(freq))
         return freq.value
 
     def set_analyser_amplitude(self, amp):
-        """
-        Control the impedance/network analyser features.
-        
-        Parameters
-        ----------
-        amp : float
-        	amp.
-        """
         dwf.FDwfAnalogImpedanceAmplitudeSet(self.hdwf, ct.c_double(amp))
 
     def get_analyser_amplitude(self):
-        """
-        Control the impedance/network analyser features.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         amp = ct.c_double()
         dwf.FDwfAnalogImpedanceAmplitudeGet(self.hdwf, ct.byref(amp))
         return amp.value
 
     def set_analyser_offset(self, offset):
-        """
-        Control the impedance/network analyser features.
-        
-        Parameters
-        ----------
-        offset : float
-        	offset.
-        """
         dwf.FDwfAnalogImpedanceOffsetSet(self.hdwf, ct.c_double(offset))
 
     def get_analyser_offset(self):
-        """
-        Control the impedance/network analyser features.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         offset = ct.c_double()
         dwf.FDwfAnalogImpedanceOffsetGet(self.hdwf, ct.byref(offset))
         return offset.value
 
     def set_analyser_probe(self, resistance, capacitance):
-        """
-        Control the impedance/network analyser features.
-        
-        Parameters
-        ----------
-        resistance : float
-        	resistance.
-        capacitance : float
-        	capacitance.
-        """
         dwf.FDwfAnalogImpedanceProbeSet(self.hdwf, ct.c_double(resistance), ct.c_double(capacitance))
 
     def get_analyser_probe(self):
-        """
-        Control the impedance/network analyser features.
-        
-        Returns
-        -------
-        resistance, capacitance : tuple of float
-        	Probe resistance and capacitance.
-        """
         resistance = ct.c_double()
         capacitance = ct.c_double()
         dwf.FDwfAnalogImpedanceProbeGet(self.hdwf, ct.byref(resistance), ct.byref(capacitance))
         return resistance.value, capacitance.value
 
     def set_analyser_n_period(self, Nperiods):
-        """
-        Control the impedance/network analyser features.
-        
-        Parameters
-        ----------
-        Nperiods : int
-        	Nperiods.
-        """
         dwf.FDwfAnalogImpedancePeriodSet(self.hdwf, ct.c_int(Nperiods)) 
 
     def get_analyser_n_period(self):
-        """
-        Control the impedance/network analyser features.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         Nperiods = ct.c_int()
         dwf.FDwfAnalogImpedancePeriodGet(self.hdwf, ct.byref(Nperiods))
         return (Nperiods.value)
 
     def reset_analyser_compensation_parameters(self):
-        """
-        Control the impedance/network analyser features.
-        """
         dwf.FDwfAnalogImpedanceCompReset(self.hdwf)
 
     def set_analyser_compensation_parameters(self, OpenResistance, OpenReactance, ShortResistance, ShortReactance):
-        """
-        Control the impedance/network analyser features.
-        
-        Parameters
-        ----------
-        OpenResistance : float
-        	OpenResistance.
-        OpenReactance : object
-        	OpenReactance.
-        ShortResistance : float
-        	ShortResistance.
-        ShortReactance : object
-        	ShortReactance.
-        """
         dwf.FDwfAnalogImpedanceCompSet(self.hdwf, ct.c_double(OpenResistance), ct.c_double(OpenReactance), ct.c_double(ShortResistance), ct.c_double(ShortReactance))
 
     def get_analyser_compensation_parameters(self):
-        """
-        Control the impedance/network analyser features.
-        
-        Returns
-        -------
-        open_r, open_x, short_r, short_x : tuple of float
-        	Compensation parameters currently set in the device.
-        """
         OpenResistance = ct.c_double()
         OpenReactance = ct.c_double()
         ShortResistance = ct.c_double()
@@ -2555,88 +1349,44 @@ class Andi(object):
         return OpenResistance.value, OpenReactance.value, ShortResistance.value, ShortReactance.value
 
     def start_analyser(self):
-        """
-        Control the impedance/network analyser features.
-        """
         dwf.FDwfAnalogImpedanceConfigure(self.hdwf, ct.c_int(1))
 
     def stop_analyser(self):
-        """
-        Control the impedance/network analyser features.
-        """
         dwf.FDwfAnalogImpedanceConfigure(self.hdwf, ct.c_int(0))
 
     def get_analyser_status(self):
-        """
-        Control the impedance/network analyser features.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         sts = ct.c_byte()
         dwf.FDwfAnalogImpedanceStatus(self.hdwf, ct.byref(sts))
         return sts.value
 
     def analyzer_ignore_last_value(self):
-        """
-        Perform the 'analyzer_ignore_last_value' operation.
-        """
         # esoteric method...
         dwf.FDwfAnalogImpedanceStatus(self.hdwf, None) 
 
     def get_analyser_raw_input(self, channel):
-        """
-        Control the impedance/network analyser features.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        
-        Returns
-        -------
-        gain, phase : tuple of float
-        	Raw analyser gain and phase for the selected channel.
-        """
         Gain = ct.c_double()
         Phase = ct.c_double()
         dwf.FDwfAnalogImpedanceStatusInput(self.hdwf, ct.c_int(channel), ct.byref(Gain), ct.byref(Phase))
         return Gain.value, Phase.value
 
     def get_analyser_impedance_measurement(self, measure):
-        """
-        Control the impedance/network analyser features.
-        
-        Parameters
-        ----------
-        measure : str
-        	measure.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
         measured_value = ct.c_double()
         dwf.FDwfAnalogImpedanceStatusMeasure(self.hdwf, AnalogImpedancesByName['measure'], ct.byref(measured_value))
         return measured_value.value
 
     ## advanced methods
     def configure_network_analyser(self,amp = 1.0, offset = 0.0, Nperiods = 16):
-        """
-        Control the impedance/network analyser features.
-        
-        Parameters
-        ----------
-        amp : float
-        	amp.
-        offset : float
-        	offset.
-        Nperiods : int
-        	Nperiods.
-        """
+        ''' Configures the Analog Discovery 2 as a network analyser,
+                Generator channel 1 (W1 - GND) used as source
+                Scope channel 1 connected as input of the DUT (1+ to W1 to the DUT, 1- to GND)
+                Scope channel 2 connected as output of the DUT (2+ to the DUT, 2- to GND)
+
+        Inputs:
+        ------- 
+            amp : 			amplitude of the source in V, by default 1V
+            offset : 		offset of the source in V, by default 0V
+            Nperiods : 		Number of periods to measure by frequency point, by default 16
+        '''
         self.enable_dynamic_auto_config()
         self.reset_analyser()						# resets the analyser
         self.set_analyser_mode(0)					# W1-C1-DUT-C2-R-GND even if useless as no impedance is measured
@@ -2648,37 +1398,33 @@ class Andi(object):
 
     def bode_measurement(self, fstart, fstop, n_points = 0, dB = False, deg = False, settling_time=0.01,
         amp = 1.0, offset = 0.0, Nperiods = 16, verbose = True):
-        """
-        Control the impedance/network analyser features.
-        
-        Parameters
-        ----------
-        fstart : object
-        	fstart.
-        fstop : object
-        	fstop.
-        n_points : object
-        	n points.
-        dB : object
-        	dB.
-        deg : object
-        	deg.
-        settling_time : float
-        	settling time.
-        amp : float
-        	amp.
-        offset : float
-        	offset.
-        Nperiods : int
-        	Nperiods.
-        verbose : object
-        	verbose.
-        
-        Returns
+        ''' Perform a frequenct sweep to measure Gain and Phase of a DUT
+
+        Inputs: 
         -------
-        result : object
-        	Result of the operation.
-        """
+            fstart: 		sweep starting frequency
+            fstop: 			sweep stoping frequency
+            n_points: 		optional, number of frequency points for the sweep, if unspecified, 10 points per decade
+                                will be computed by default 
+            dB: 			if False, gain will be returned unitless, if True, gain returned in decibels.
+                                False by default
+            deg: 			if False, the phase will be returned in radians. If True, phase returned in degrees
+                                False by default
+            settling_time: 	time imposed to get to steady state on the DUT, after seting a new frequency and 
+                                before measurement. In seconds. By default 10 ms
+            amp: 			Amplitude of the AWG output
+            offset: 		DC offset of the AWG output
+            Nperiods:		Number of periods to wait for the measurement 
+            verbose: 		verbosity of the algorithm. If true, a progression bar will be displayed in the terminal. 
+                                True by default
+
+        Returns:
+        --------
+            freq: np.array, vector containing the frequencies of the sweep
+            gain: np.array, vector containing the gain values, unitless or in dB (see above) CH2/CH1
+            phase: np.array, vector containing the phase values, in radians or degrees (see above)
+            gain_ch1: np.array, vector containing the gain values, unitless or in dB (see above) CH1/amp (no phase associated)
+        '''
 
     
         sleep(10*settling_time)
@@ -2726,27 +1472,31 @@ class Andi(object):
         return freq, gain, phase, gain_ch1
 
     def single_frequency_gain_phase(self,frequency,dB = False, deg = False, settling_time=0.01, verbose = True):
-        """
-        Perform the 'single_frequency_gain_phase' operation.
-        
-        Parameters
-        ----------
-        frequency : float
-        	frequency.
-        dB : object
-        	dB.
-        deg : object
-        	deg.
-        settling_time : float
-        	settling time.
-        verbose : object
-        	verbose.
-        
-        Returns
+        ''' Perform a single frequency analysis to measure Gain and Phase of a DUT
+
+        Inputs: 
         -------
-        result : object
-        	Result of the operation.
-        """
+            frequency: 		sinewave frequency
+            n_points: 		optional, number of frequency points for the sweep, if unspecified, 10 points per decade
+                                will be computed by default 
+            dB: 			if False, gain will be returned unitless, if True, gain returned in decibels.
+                                False by default
+            deg: 			if False, the phase will be returned in radians. If True, phase returned in degrees
+                                False by default
+            settling_time: 	time imposed to get to steady state on the DUT, after seting a new frequency and 
+                                before measurement. In seconds. By default 10 ms
+            amp: 			Amplitude of the AWG output
+            offset: 		DC offset of the AWG output
+            Nperiods:		Number of periods to wait for the measurement 
+            verbose: 		verbosity of the algorithm. If true, a progression bar will be displayed in the terminal. 
+                                True by default
+
+        Returns:
+        --------
+            gain: np.array, vector containing the gain values, unitless or in dB (see above) CH2/CH1
+            phase: np.array, vector containing the phase values, in radians or degrees (see above)
+            gain_ch1: np.array, vector containing the gain values, unitless or in dB (see above) CH1/amp (no phase associated)
+        '''
         self.set_analyser_frequency(frequency)
         sleep(settling_time)
         self.analyzer_ignore_last_value() # ignore last capture, forces a new measurement after the settling time
@@ -2778,113 +1528,45 @@ class Andi(object):
 
     ## SPI protocol
     def SPI_reset(self):
-        """
-        Perform the 'SPI_reset' operation.
-        """
         dwf.FDwfDigitalSpiReset(self.hdwf)
 
     def set_SPI_frequency(self, freq):
-        """
-        Perform the 'set_SPI_frequency' operation.
-        
-        Parameters
-        ----------
-        freq : float
-        	freq.
-        """
         dwf.FDwfDigitalSpiFrequencySet(self.hdwf, ct.c_double(freq))
 
     def set_SPI_Clock_channel(self, channel):
-        """
-        Perform the 'set_SPI_Clock_channel' operation.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        """
         dwf.FDwfDigitalSpiClockSet(self.hdwf,ct.c_int(channel))
 
     def set_SPI_Data_channel(self, idxDQ, channel):
-        """
-        Perform the 'set_SPI_Data_channel' operation.
-        
-        Parameters
-        ----------
-        idxDQ : object
-        	idxDQ.
-        channel : int
-        	channel.
-        """
+        '''
+            for idxDQ, consider using the dictionnary: SPIDataIdx
+        '''
         dwf.FDwfDigitalSpiDataSet(self.hdwf, idxDQ, ct.c_int(channel))
 
     def set_SPI_mode(self, mode):
-        """
-        Perform the 'set_SPI_mode' operation.
-        
-        Parameters
-        ----------
-        mode : int
-        	mode.
-        """
+        '''
+            for mode, consider using the dictionnary: SPIMode
+        '''
         dwf.FDwfDigitalSpiModeSet(self.hdwf, mode)
 
     def set_SPI_order(self, order):
-        """
-        Perform the 'set_SPI_order' operation.
-        
-        Parameters
-        ----------
-        order : object
-        	order.
-        """
         dwf.FDwfDigitalSpiOrderSet(self.hdwf,ct.c_int(order))
 
     def set_SPI_MSB_first(self):
-        """
-        Perform the 'set_SPI_MSB_first' operation.
-        """
         self.set_SPI_order(1)
 
     def set_SPI_LSB_first(self):
-        """
-        Perform the 'set_SPI_LSB_first' operation.
-        """
         self.set_SPI_order(0)
 
     def set_SPI_CS(self, channel, logiclevel):
-        """
-        Perform the 'set_SPI_CS' operation.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        logiclevel : object
-        	logiclevel.
-        """
+        '''
+            for logiclevel, consider using the dictionary: LogicLevel
+        '''
         dwf.FDwfDigitalSpiSelectSet(self.hdwf,ct.c_int(channel),logiclevel)
 
     def SPI_write_read(self, cDQ, bit_per_word, values, N_read):
-        """
-        Perform the 'SPI_write_read' operation.
-        
-        Parameters
-        ----------
-        cDQ : object
-        	cDQ.
-        bit_per_word : object
-        	bit per word.
-        values : object
-        	values.
-        N_read : object
-        	N read.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
+        '''
+            for cDQ, consider using the dictionary: SPI_cDQ
+        '''
         if type(values) != tuple:
             values = (values ,)
         valuesTX = (ct.c_ubyte*len(values))(*values)
@@ -2897,49 +1579,18 @@ class Andi(object):
         return RX
 
     def SPI_select(self,channel, logiclevel):
-        """
-        Perform the 'SPI_select' operation.
-        
-        Parameters
-        ----------
-        channel : int
-        	channel.
-        logiclevel : object
-        	logiclevel.
-        """
         dwf.FDwfDigitalSpiSelect(self.hdwf,ct.c_int(channel),logiclevel)
 
     def SPI_write_one(self, cDQ, Nbits, value):
-        """
-        Perform the 'SPI_write_one' operation.
-        
-        Parameters
-        ----------
-        cDQ : object
-        	cDQ.
-        Nbits : object
-        	Nbits.
-        value : object
-        	value.
-        """
+        '''
+            for cDQ, consider using the dictionary: SPI_cDQ
+        '''
         dwf.FDwfDigitalSpiWriteOne(self.hdwf, cDQ, ct.c_int(Nbits),ct.c_uint(value))
 
     def SPI_read_one(self, cDQ, Nbits):
-        """
-        Perform the 'SPI_read_one' operation.
-        
-        Parameters
-        ----------
-        cDQ : object
-        	cDQ.
-        Nbits : object
-        	Nbits.
-        
-        Returns
-        -------
-        result : object
-        	Result of the operation.
-        """
+        '''
+            for cDQ, consider using the dictionary: SPI_cDQ
+        '''
         rxvalue = ct.c_uint32()
         dwf.FDwfDigitalSpiReadOne(self.hdwf, cDQ, ct.c_int(Nbits),ct.byref(rxvalue))
         #dwf.FDwfDigitalSpiReadOne(self.hdwf, cDQ, ct.c_int(Nbits),rxvalue)
