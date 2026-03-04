@@ -20,7 +20,8 @@ Getting started
 ---------------
 
 1. Install the Digilent **WaveForms** application/runtime.
-2. Install the Python package (see the README).
+2. Install the Python package with `pip`: ``pip install andi-py``
+
 3. Start with :doc:`user_guide/01_connection` and follow the example-driven guides.
 
 Documentation map
