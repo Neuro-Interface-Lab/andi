@@ -388,7 +388,7 @@ class Andi(object):
     
     Parameters
     ----------
-    *arg :
+    ``*arg`` :
         Optional device selector.
     
         - No argument: open the first available (free) device.

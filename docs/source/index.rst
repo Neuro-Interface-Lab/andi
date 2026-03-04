@@ -1,23 +1,48 @@
-.. andi-py documentation master file, created by
-   sphinx-quickstart on Tue Mar  3 14:06:23 2026.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+ANDI
+====
 
-andi-py documentation
-=====================
+.. image:: logo/andi_logo.svg
+   :alt: ANDI logo
+   :align: center
+   :width: 320
 
-Add your content using ``reStructuredText`` syntax. See the
-`reStructuredText <https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html>`_
-documentation for details.
+**ANDI** is an open-source Python library to control **Digilent Analog Discovery**
+instruments through the **WaveForms SDK**.
 
+It provides a lightweight, practical API for:
+
+- **Signal generation** (AWG) with common waveforms
+- **Oscilloscope acquisition** (ADC), including triggering and buffering
+- **Interactive workflows** (live plots, averaging, real-time acquisition)
+- **Network characterization** (Bode / frequency response)
+
+Getting started
+---------------
+
+1. Install the Digilent **WaveForms** application/runtime.
+2. Install the Python package (see the README).
+3. Start with :doc:`user_guide/01_connection` and follow the example-driven guides.
+
+Documentation map
+-----------------
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: User guide
+
+   user_guide/index
+
+.. toctree::
+   :maxdepth: 2
+   :caption: API reference
 
    api
 
-.. toctree::
-   :maxdepth: 2
+Community & contributions
+-------------------------
 
-   user_guide/index
+ANDI is maintained as an open-source project. Issues and pull requests are welcome:
+
+- Prefer small, focused PRs with clear motivation.
+- For hardware-dependent changes, include a minimal example script under ``examples/``.
+- Keep API behavior stable; document changes in the changelog/release notes.

@@ -27,7 +27,11 @@ extensions = [
     "sphinx.ext.viewcode",
 ]
 
-html_theme = "sphinx_rtd_theme"
+html_theme = "furo"
+html_title = "ANDI"
+html_static_path = ['_static']
+html_logo = "logo/andi_logo.svg"
+add_module_names = False  # shorten fully-qualified names in headings
 
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
@@ -45,8 +49,4 @@ autodoc_mock_imports = [
 ]
 
 
-# -- Options for HTML output -------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'alabaster'
-html_static_path = ['_static']
