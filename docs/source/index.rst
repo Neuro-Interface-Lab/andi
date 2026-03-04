@@ -17,3 +17,7 @@ documentation for details.
 
    api
 
+.. toctree::
+   :maxdepth: 2
+
+   user_guide/index
