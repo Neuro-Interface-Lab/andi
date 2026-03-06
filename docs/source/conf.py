@@ -5,7 +5,7 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath("../.."))
+html_baseurl = os.environ.get("READTHEDOCS_CANONICAL_URL", "/")
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
